@@ -1,56 +1,113 @@
-<!-- <p align="center">
-   <img alt="is-a.dev Banner" src="https://raw.githubusercontent.com/is-a-dev/register/main/media/banner.png">
-</p> -->
+# register — Subdomain `lollo.is-a.dev`
 
-<p align="center">
-   <img height="350" alt="is-a.dev Banner" src="https://raw.githubusercontent.com/is-a-dev/register/main/media/banner.png">
-</p>
+[![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black)](https://developer.mozilla.org/en-US/docs/Web/JavaScript)
+[![Node.js](https://img.shields.io/badge/Node.js-339933?style=for-the-badge&logo=nodedotjs&logoColor=white)](https://nodejs.org/)
+[![DNSControl](https://img.shields.io/badge/DNSControl-v4.14-5C2D91?style=for-the-badge)](https://dnscontrol.org/)
+[![Cloudflare](https://img.shields.io/badge/Cloudflare-F38020?style=for-the-badge&logo=cloudflare&logoColor=white)](https://www.cloudflare.com/)
 
-<p align="center">
-   <img alt="Domains" src="https://img.shields.io/github/directory-file-count/is-a-dev/register/domains?color=5c46eb&label=domains&style=for-the-badge">
-   <img alt="Open Pull Requests" src="https://img.shields.io/github/issues-raw/is-a-dev/register?color=5c46eb&label=issues&style=for-the-badge">
-   <img alt="Open Issues" src="https://img.shields.io/github/issues-pr-raw/is-a-dev/register?color=5c46eb&label=pull%20requests&style=for-the-badge">
-   <br>
-</p>
+Fork del repository ufficiale [is-a-dev/register](https://github.com/is-a-dev/register) usato per gestire il dominio **`lollo.is-a.dev`**. Il repository registra i record DNS (CNAME verso Vercel + TXT di verifica) di questo sottodominio e si sincronizza periodicamente con l'upstream per mantenere la validazione dei contributi.
 
-<h1 align="center">is-a.dev</h1>
+## Cos'è is-a.dev
 
-<p align="center"><strong>is-a.dev</strong> is a service that allows developers to get a sweet-looking <code>.is-a.dev</code> subdomain for their personal websites.</p>
+**is-a.dev** è un servizio gratuito che permette agli sviluppatori di ottenere un sottodominio `.is-a.dev` per i propri siti personali. La registrazione avviene tramite pull request: ogni sottodominio è un file JSON in `domains/`, il cui contenuto viene validato automaticamente da test e poi pubblicato sui DNS di Cloudflare.
+
+## Caratteristiche
+
+- **Dominio registrato**: `lollo.is-a.dev` con CNAME verso `cname.vercel-dns.com` (hosting Vercel).
+- **Verifica Vercel**: record TXT `vc-domain-verify` per la validazione del dominio sulla piattaforma.
+- **Fork sincronizzato con upstream**: mantiene la pipeline completa di CI/CD del progetto originale.
+- **Struttura dichiarativa**: configurazione DNS in `dnsconfig.js` (DNSControl).
+
+## Tech Stack
+
+| Tecnologia | Ruolo |
+|---|---|
+| DNSControl 4.14 | Linguaggio dichiarativo per generare/applicare i record DNS |
+| Cloudflare | Provider DNS del dominio `is-a.dev` |
+| Node.js 20 | Runtime per lo script di generazione del dataset (`util/raw-api.js`) |
+| AVA (Node) | Test runner per la validazione dei file in `domains/` |
+| GitHub Actions | CI/CD: validazione PR e `dnscontrol push` al merge |
+
+## Architettura
+
+Flusso di registrazione e pubblicazione:
+
+```
+   Utente                     CI (GitHub Actions)                Produzione
+   ┌──────┐                    ┌────────────────┐                ┌─────────┐
+   │ fork │  ── PR ──►         │  ci.yml        │                │         │
+   │+JSON │                    │  · AVA tests   │                │  DNS    │
+   └──────┘                    │  · dnscontrol  │                │Cloudflare│
+                               │    check       │                │         │
+                               └───────┬────────┘                └────┬────┘
+                                       │ merge su main               │
+                                       ▼                             ▼
+                               ┌──────────────┐    push    ┌────────────────┐
+                               │  publish.yml │ ─────────► │ dnscontrol push│
+                               └──────────────┘            └────────────────┘
+```
+
+I file in `domains/*.json` vengono letti da `dnsconfig.js`, che genera i record per la zona `is-a.dev`. La validazione è a due livelli: test AVA sui file (schema, valori dei record, ownership del PR) e `dnscontrol check` sulla configurazione. Al merge, `dnscontrol push` applica le modifiche a Cloudflare.
+
+## Project Structure
+
+```
+register/
+├── domains/
+│   ├── lollo.json           # Il sottodominio di questo fork (CNAME → Vercel)
+│   └── _vercel.lollo.json   # TXT di verifica dominio Vercel
+├── dnsconfig.js             # Configurazione zona DNSControl
+├── util/                    # Script di supporto (reserved, raw-api, validazioni)
+├── tests/                   # Suite AVA (domains, json, proxy, pr, records)
+├── .github/workflows/       # CI/CD: ci, dnscontrol, publish, raw-api, stale
+└── package.json             # Script di test (npx ava tests/*.test.js)
+```
+
+## Installation & Setup
+
+Clonare e testare localmente (per validare modifiche ai file dei domini):
+
+```bash
+git clone https://github.com/St0rmosu/register.git
+cd register
+npm install
+npm test          # esegue la suite AVA su tutti i file in domains/
+```
+
+## Usage
+
+Questo fork non va modificato per richiedere nuovi domini (le richieste si aprono su [is-a-dev/register](https://github.com/is-a-dev/register)). Il suo scopo è possedere e gestire `lollo.is-a.dev`:
+
+1. `domains/lollo.json` definisce il CNAME verso l'hosting (attualmente Vercel).
+2. `domains/_vercel.lollo.json` contiene la TXT di verifica richiesta da Vercel.
+3. Le modifiche vengono applicate al merge su `main` dalla pipeline `publish.yml`.
+4. Per cambiare hosting, aggiorna il CNAME e il record TXT di verifica di conseguenza.
+
+## API Documentation
+
+Nessuna API pubblica in questo fork. Nel progetto upstream, `util/raw-api.js` genera il dataset JSON pubblico per il progetto [is-a-dev/raw-api](https://github.com/is-a-dev/raw-api), che espone l'elenco dei sottodomini.
+
+## Engineering Decisions
+
+- **Configurazione dichiarativa**: `dnsconfig.js` usa DNSControl, che mappa ~14.000 file JSON in record DNS in modo deterministico e riproducibile, senza scripting manuale.
+- **Validazione a due livelli**: test unitari AVA (regole di business: ownership, record validi, CNAME non proxied, ecc.) + `dnscontrol check` (validità della zona), entrambi in CI.
+- **Ownership enforcement in CI**: i metadati del PR (autore, file modificati) vengono iniettati come env var nei test, così ogni utente può toccare solo i propri sottodomini.
+- **Sincronizzazione con upstream**: mantenere il fork aggiornato è essenziale per ricevere correzioni di test e regole di validazione.
+
+## Testing
+
+```bash
+npm test
+```
+
+La suite copre: naming dei file (`json.test.js`), regole di nested e ownership (`domains.test.js`, `pr.test.js`), valori dei record DNS (IPv4/IPv6, MX, NS, SRV, DS, CAA, TLSA, TXT, URL) e vincoli di proxy (`records.test.js`, `proxy.test.js`).
+
+## Limitations & Future Improvements
+
+- Fork personale: le modifiche locali al fork non devono confliggere con l'upstream (merge frequenti consigliati).
+- La verifica di proprietà del dominio è legata al record TXT di Vercel: cambiare hosting richiede l'aggiornamento di entrambi i file.
+- Prossimi passi: automatizzare il sync con upstream (es. GitHub Actions di rebase), aggiungere redirect/record aggiuntivi se il sito cresce.
 
 ---
 
-## Announcements
-Please join our [Discord server](https://discord.gg/is-a-dev-830872854677422150) for announcements, service updates, and downtime notifications regarding the service.
-
-Not all announcements are posted on GitHub[^1], however they will always be posted in our Discord server.
-
-[^1]: We only post announcements on GitHub in the case of a serious incident, which you'll see at the top of this README.
-
-# Register
-> If you want a visual guide, check out [this blog post](https://blog.wharrison.com.au/2024/07/is-a-dev/).
-
-- [Fork](https://github.com/is-a-dev/register/fork) the repository.
-- Follow the instructions on our [documentation](https://docs.is-a.dev).
-  - Do not use AI to generate your request, it **WILL** always get it wrong and will delay you getting a domain.
-- Once you open your pull request (PR), it will be reviewed. *Keep an eye on it in case changes are needed!*
-   - If changes have been requested, please make the specified changes otherwise **you will be rejected**.
-- Once your PR is merged, your DNS records should be published with-in a few minutes.
-- Enjoy your new `.is-a.dev` subdomain! Please consider leaving a star ⭐️ to help support us!
-
-## Spam Pull Requests
-With the recent rising of invalid PRs, including PRs generated with AI, we reserve the right to:
-
-- Close these PRs without explanation.
-- Block or limit the author's ability to interact with is-a.dev's repositories and resources.
-- Remove any existing domains owned by the author if connected to TOS-violating content.
-
-## Report Abuse
-If you find any subdomains being abused or breaking our [ToS](https://is-a.dev/terms), please report them by [creating an issue](https://github.com/is-a-dev/register/issues/new?assignees=&labels=report-abuse&projects=&template=report-abuse.md&title=Report+abuse) with relevant evidence.
-
----
-
-We are supported by Cloudflare's [Project Alexandria](https://www.cloudflare.com/lp/project-alexandria) sponsorship program, we would not be able to operate without their help!
-
-<a href="https://www.cloudflare.com">
-   <img alt="Cloudflare Logo" src="https://raw.githubusercontent.com/is-a-dev/register/main/media/cloudflare.png" height="48">
-</a>
+*Fork di [is-a-dev/register](https://github.com/is-a-dev/register) — gestito da St0rmosu.*
